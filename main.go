@@ -4,50 +4,34 @@ import (
 	"fmt"
 	"github.com/jasonlvhit/gocron"
 	"github.com/joho/godotenv"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
-
-type MessageInterface interface {
-	Send(salaahName, time string)
-}
-
-type Slack struct {
-	Url, Token, Channel, UserName string
-}
-
-func (s Slack) Send(salaahName, time string) {
-
-	message := fmt.Sprintf(
-		"<!channel>Assalam, Please be prepared for %s salaah at %s ",
-		salaahName, time,
-	)
-
-	payload := strings.NewReader(fmt.Sprintf(
-		"token=%s&channel=%s&text=%s&username=%s",
-		s.Token, s.Channel, message, s.UserName,
-	))
-
-	//fmt.Println(message, reqUrl)
-	req, _ := http.NewRequest("POST", s.Url, payload)
-
-	req.Header.Add("cache-control", "no-cache")
-	req.Header.Add("content-type", "application/x-www-form-urlencoded")
-
-	res, _ := http.DefaultClient.Do(req)
-
-	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
-	//fmt.Println(s)
-	fmt.Println(res)
-	fmt.Println(string(body))
-}
 
 func sendMessage(m MessageInterface, salaahName, time string) {
 	m.Send(salaahName, time)
+}
+
+func getCronTime(t string) string {
+	hm := strings.Split(t, ":")
+	h, _ := strconv.Atoi(hm[0])
+	m, _ := strconv.Atoi(hm[1])
+	fmt.Println(h, m)
+	namazT := time.Date(
+		time.Now().Year(),
+		time.Now().Month(),
+		time.Now().Day(),
+		int(h),
+		int(m),
+		0,
+		0,
+		time.UTC,
+	).Add(time.Minute * -10)
+
+	return fmt.Sprintf("%d:%d", namazT.Hour(), namazT.Second())
 }
 
 func main() {
@@ -61,9 +45,9 @@ func main() {
 	asr := os.Getenv("ASR")
 	magrib := os.Getenv("MAGRIB")
 
-	fmt.Println("Juhr at ", juhr)
-	fmt.Println("asr at ", asr)
-	fmt.Println("magrib at ", magrib)
+	fmt.Println("Juhr at ", getCronTime(juhr))
+	fmt.Println("Asr at ", getCronTime(asr))
+	fmt.Println("Magri at ", getCronTime(magrib))
 
 	s := gocron.NewScheduler()
 
@@ -74,7 +58,14 @@ func main() {
 		UserName: os.Getenv("SLACK_USER_NAME"),
 	}
 
-	//s.Every(1).Seconds().Do(taskWithParam, 1, 2)
-	s.Every(5).Seconds().Do(sendMessage, slack, "Juhr", string(juhr))
+	//s.Every(5).Seconds().Do(sendMessage, slack, "Juhr", string(juhr))
+
+	fmt.Println(getCronTime(juhr))
+	fmt.Println(slack)
+
+	//s.Every(1).Day().At(getCronTime(juhr)).Do(sendmessage, slack, "juhr", string(juhr))
+	//s.Every(1).Day().At(getCronTime(asr)).Do(sendmessage, slack, "Asr", string(asr))
+	//s.Every(1).Day().At(getCronTime(magrib)).Do(sendmessage, slack, "Magrib", string(magrib))
+
 	<-s.Start()
 }
