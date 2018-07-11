@@ -18,7 +18,7 @@ type Slack struct {
 func (s Slack) Send(salaahName, time string) {
 
 	message := fmt.Sprintf(
-		"<!channel>Assalam, Please be prepared for %s salaah at %s ",
+		"<!channel>Assalam, Please be prepared for the jamaah of %s salaah at %s ",
 		salaahName, time,
 	)
 
@@ -27,7 +27,6 @@ func (s Slack) Send(salaahName, time string) {
 		s.Token, s.Channel, message, s.UserName,
 	))
 
-	//fmt.Println(message, reqUrl)
 	req, _ := http.NewRequest("POST", s.Url, payload)
 
 	req.Header.Add("cache-control", "no-cache")
